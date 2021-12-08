@@ -1,36 +1,9 @@
-% :- [KB].
+
 :- include('KB.pl').
 
 
-% returns true if X,Y are valid position in the grid
-isValid(X,Y):-
-    grid(R,C),X>=0,X=<R,Y>=0,Y=<C.
 
-
-% move(X,Y,X,Y,S0,S0).
-% move(X,Y1,X,Y2,result(right,S),S0):- Y1<Y2,Ny is Y1+1,move(X,Ny,X,Y2,S,S0).
-% move(X,Y1,X,Y2,result(left,S),S0):- Ny is Y1-1,move(X,Ny,X,Y2,S,S0).
-% move(X1,Y1,X2,Y2,result(down,S),S0):- X1<X2,Nx is X1+1,move(Nx,Y1,X2,Y2,S,S0).
-% move(X1,Y1,X2,Y2,result(up,S),S0):- Nx is X1-1,move(Nx,Y1,X2,Y2,S,S0).
-
-% solve(_,_,[],S,S).
-% solve(InitX,InitY,[[X,Y]|T],S0,S):-
-% booth(BoothX,BoothY),
-% move(InitX,InitY,X,Y,S_after_going_to_hostage,S0),
-% move(X,Y,BoothX,BoothY,SafterDrop,result(carry,S_after_going_to_hostage)),
-% solve(BoothX,BoothY,T,result(drop,SafterDrop),S).
-
-
-% isGoal(S):-
-%     neo_loc(NeoX,NeoY), hostages_loc(L),solve(NeoX,NeoY,L,s0,S).
-
-% solve(X,Y,[],CarriedHostages,_):-
-% solve(X,Y,[H|T],CarriedHostages,C_so_far):-
-
-% we made the drop the last action since, the agent must drop the final hostage
-% TODO may we have a case that there is a grid with no hostages.
-isGoal(S):-
-% booth(X,Y),neoArrived(X,Y,[],_,S).
+goal(S):-
 booth(X,Y),hostages_loc(L),neoArrived(X,Y,L,[],_,S).
 
 directions(up,-1,0).
@@ -38,50 +11,50 @@ directions(down,1,0).
 directions(left,0,-1).
 directions(right,0,1).
 
-% neoArrived(X,Y,s0):-neo_loc(X,Y).
-% neoArrived(X,Y,result(drop,S)):-canDrop(X,Y,S),neoArrived(X,Y,S).
-% neoArrived(X,Y,result(carry,S)):- canCarry(X,Y,S),neoArrived(X,Y,S).
-% neoArrived(X,Y,result(A,S)):- directions(A,Dx,Dy),OldX is X-Dx,OldY is Y-Dy,
-%                             isValid(OldX,OldY),neoArrived(OldX,OldY,S).
+%*********************************************************************%
+%                     Succssor state axioms                           %
+%*********************************************************************%
 
-%neoArrived(X,Y,Hostages,Capacity,State) returns true if Neo is in X,Y in state State with current actual capacity Capacity
-% and current hostages list Hostages at the current state State.
+
+
+
+%neoArrived(X,Y,CarriedHostages,UndroppedHostages,Capacity,S)
+%is true if Neo can reach X,Y in state S starting from S0   
+% and carrying all Hostages in CarriedHostages with remaining undropped hostaged in Undropped
+
 
 % Base case where X,Y will be neo's inital location, L is the list of all hostages in the grid, C is the current capacity.
-% neoArrived(X,Y,L,C,s0):-neo_loc(X,Y),hostages_loc(L),capacity(C).
 neoArrived(X,Y,[],L,C,s0):-neo_loc(X,Y),hostages_loc(L),capacity(C).
 
 % if the action is drop we check the ability of neo to drop a hostage.
-neoArrived(X,Y,UncarriedHostages,DroppedHostages,FullCapcity,result(drop,S)):-
-capacity(FullCapcity),hostages_loc(OriginalHostages),
-newDroppedHostages(OriginalHostages,UncarriedHostages,DroppedHostages),
-neoArrived(X,Y,UncarriedHostages,_,C,S),C>=0,canDrop(X,Y,S).
-
-% neoArrived(X,Y,UncarriedHostages,NewC,result(carry,S)):- 
-           
-%             skip(X,Y,Hostages,UncarriedHostages),
-%             neoArrived(X,Y,Hostages,C,S),C>0,NewC is C-1, canCarry(X,Y,Hostages,S).
+neoArrived(X,Y,CarriedHostages,UndroppedHostages,FullCapcity,result(drop,S)):-
+capacity(FullCapcity),hostages_loc(OriginalHostages),booth(X,Y),
+newUndroppedHostages(OriginalHostages,CarriedHostages,UndroppedHostages),
+neoArrived(X,Y,CarriedHostages,_,C,S),C>=0,haveCarriedHostages(S).
 
 
-
-neoArrived(X,Y,Hostages,DroppedHostages,NewC,result(carry,S)):- 
-    canCarry(X,Y,Hostages),
-    skip(X,Y,Hostages,UncarriedHostages),
-    neoArrived(X,Y,UncarriedHostages,DroppedHostages,C,S),C>0,NewC is C-1.
-
-
-neoArrived(X,Y,L,DroppedHostages,C,result(A,S)):- directions(A,Dx,Dy),OldX is X-Dx,OldY is Y-Dy,
-                            isValid(OldX,OldY),neoArrived(OldX,OldY,L,DroppedHostages,C,S).
+% NewCarriedHostages =  set of Hostages carried in state results(carry,S) (either have been carried before or currently on Neo's shoulder).
+neoArrived(X,Y,NewCarriedHostages,UndroppedHostages,NewC,result(carry,S)):- 
+    canCarry(X,Y,NewCarriedHostages),
+    skip(X,Y,NewCarriedHostages,CarriedHostages),
+    neoArrived(X,Y,CarriedHostages,UndroppedHostages,C,S),C>0,NewC is C-1.
 
 
+neoArrived(X,Y,L,UndroppedHostages,C,result(A,S)):- directions(A,Dx,Dy),OldX is X-Dx,OldY is Y-Dy,
+                            isValid(OldX,OldY),neoArrived(OldX,OldY,L,UndroppedHostages,C,S).
 
-%returns true if Neo have carriedHostages at state S and can drop them at X,Y if this is the location of the booth.
-canDrop(X,Y,S):-booth(X,Y),haveCarriedHostages(S).
 
 
 %Neo have carried hostages if the sequence of actions contains at least one carry not followed by a drop.
 haveCarriedHostages(result(carry,S)).
 haveCarriedHostages(result(A,S)):-  ( A\=drop),(A\=carry),haveCarriedHostages(S).
+
+
+
+%*********************************************************************%
+%                          Helper predicates                          %
+%*********************************************************************%
+
 
 %return true if there is a hostage in X,Y in state S.
 canCarry(X,Y,Hostages):-hostages_loc(L),canCarryHelper(X,Y,Hostages).
@@ -94,18 +67,21 @@ skip(X,Y,[[X,Y]|T],T).
 skip(X,Y,[H|T],[H|Out]):-skip(X,Y,T,Out).
 
 
+% contains(Item,List) true if List contains Item.
 contains(Item,[Item|T]).
 contains(Item,[H|T]):- contains(Item,T).
 
 
-% newDroppedHostages(OriginalHostages,UncarriedHostages,HostagesDropped).
-newDroppedHostages([],_,[]).
-newDroppedHostages([H|T],UncarriedHostages,[H|Out]):- \+ contains(H,UncarriedHostages),newDroppedHostages(T,UncarriedHostages,Out).
+% newUndroppedHostages(OriginalHostages,CarriedHostages,UndroppedHostages).
+% true when UndroppedHostages is the set of hostages in OriginalHostages but not in CarriedHostages.
+newUndroppedHostages([],_,[]).
+newUndroppedHostages([H|T],CarriedHostages,[H|Out]):- \+ contains(H,CarriedHostages),newUndroppedHostages(T,CarriedHostages,Out).
+newUndroppedHostages([H|T],CarriedHostages,Out):- contains(H,CarriedHostages),newUndroppedHostages(T,CarriedHostages,Out).
 
-newDroppedHostages([H|T],UncarriedHostages,Out):- contains(H,UncarriedHostages),newDroppedHostages(T,UncarriedHostages,Out).
 
-
-
+% returns true if X,Y are valid position in the grid
+isValid(X,Y):-
+    grid(R,C),X>=0,X=<R,Y>=0,Y=<C.
 
 
 
