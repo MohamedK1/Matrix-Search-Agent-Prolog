@@ -3,8 +3,8 @@
 
 
 
-goal(S):-
-booth(X,Y),hostages_loc(L),neoArrived(X,Y,L,[],_,S).
+goal(result(drop,S)):-
+booth(X,Y),hostages_loc(L),neoArrived(X,Y,L,[],_,result(drop,S)).
 
 directions(up,-1,0).
 directions(down,1,0).
@@ -28,6 +28,7 @@ neoArrived(X,Y,[],L,C,s0):-neo_loc(X,Y),hostages_loc(L),capacity(C).
 
 % if the action is drop we check the ability of neo to drop a hostage.
 neoArrived(X,Y,CarriedHostages,UndroppedHostages,FullCapcity,result(drop,S)):-
+    \+ base(X,Y,CarriedHostages,UndroppedHostages,FullCapcity),
 capacity(FullCapcity),hostages_loc(OriginalHostages),booth(X,Y),
 newUndroppedHostages(OriginalHostages,CarriedHostages,UndroppedHostages),
 neoArrived(X,Y,CarriedHostages,_,C,S),C>=0,haveCarriedHostages(S).
@@ -35,13 +36,16 @@ neoArrived(X,Y,CarriedHostages,_,C,S),C>=0,haveCarriedHostages(S).
 
 % NewCarriedHostages =  set of Hostages carried in state results(carry,S) (either have been carried before or currently on Neo's shoulder).
 neoArrived(X,Y,NewCarriedHostages,UndroppedHostages,NewC,result(carry,S)):- 
+    \+ base(X,Y,NewCarriedHostages,UndroppedHostages,NewC),
     canCarry(X,Y,NewCarriedHostages),
     skip(X,Y,NewCarriedHostages,CarriedHostages),
     neoArrived(X,Y,CarriedHostages,UndroppedHostages,C,S),C>0,NewC is C-1.
 
 
-neoArrived(X,Y,L,UndroppedHostages,C,result(A,S)):- directions(A,Dx,Dy),OldX is X-Dx,OldY is Y-Dy,
-                            isValid(OldX,OldY),neoArrived(OldX,OldY,L,UndroppedHostages,C,S).
+neoArrived(X,Y,L,UndroppedHostages,C,result(A,S)):- 
+    \+ base(X,Y,L,UndroppedHostages,C),
+    directions(A,Dx,Dy),OldX is X-Dx,OldY is Y-Dy,
+    isValid(OldX,OldY),neoArrived(OldX,OldY,L,UndroppedHostages,C,S).
 
 
 
@@ -81,6 +85,11 @@ newUndroppedHostages([H|T],CarriedHostages,Out):- contains(H,CarriedHostages),ne
 % returns true if X,Y are valid position in the grid
 isValid(X,Y):-
     grid(R,C),X>=0,X=<R,Y>=0,Y=<C.
+
+
+%returns true if X,Y not Neo's Location and carriedHostages is [] and UndroppedHostages is the original list of hostages, C is the full Capacity 
+base(X,Y,[],L,C):-neo_loc(X,Y),hostages_loc(L),capacity(C).
+
 
 
 
