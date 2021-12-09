@@ -56,10 +56,9 @@ haveCarriedHostages(result(A,S)):-  ( A\=drop),(A\=carry),haveCarriedHostages(S)
 %*********************************************************************%
 
 
-%return true if there is a hostage in X,Y in state S.
-canCarry(X,Y,Hostages):-hostages_loc(L),canCarryHelper(X,Y,Hostages).
-canCarryHelper(X,Y,[[X,Y]|T]).
-canCarryHelper(X,Y,[_|T]):-canCarryHelper(X,Y,T).
+%return true if there is a hostage in X,Y in the list Hostages.
+canCarry(X,Y,[[X,Y]|T]).
+canCarry(X,Y,[_|T]):-canCarry(X,Y,T).
 
 
 %skip(X,Y,L,Rem)  the location X,Y from the List L and returns the remaining list Rem
