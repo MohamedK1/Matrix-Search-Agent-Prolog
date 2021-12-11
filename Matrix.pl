@@ -1,9 +1,18 @@
 
 :- include('KB.pl').
+:- set_prolog_stack(global, limit(100 000 000 000)).
+:- set_prolog_stack(trail,  limit(20 000 000 000)).
+:- set_prolog_stack(local,  limit(2 000 000 000)).
+:-set_prolog_flag(answer_write_options,[max_depth(0)]).
 
 
+goal(S):- goalHelper(S,1).
 
-goal(result(drop,S)):-
+
+goalHelper(S,X):-
+    call_with_depth_limit(isGoal(S),X,R),(R\=depth_limit_exceeded;(R=depth_limit_exceeded,NewX is X +1,goalHelper(S,NewX))).
+
+isGoal(result(drop,S)):-
 booth(X,Y),hostages_loc(L),neoArrived(X,Y,L,[],_,result(drop,S)).
 
 directions(up,-1,0).
@@ -87,7 +96,7 @@ isValid(X,Y):-
     grid(R,C),X>=0,X=<R,Y>=0,Y=<C.
 
 
-%returns true if X,Y not Neo's Location and carriedHostages is [] and UndroppedHostages is the original list of hostages, C is the full Capacity 
+%returns true if X,Y is Neo's Location and carriedHostages is [] and UndroppedHostages is the original list of hostages, C is the full Capacity 
 base(X,Y,[],L,C):-neo_loc(X,Y),hostages_loc(L),capacity(C).
 
 
